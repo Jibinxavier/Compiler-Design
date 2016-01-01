@@ -1,0 +1,25 @@
+// This is a test program which can be compiled by the TastierCompiler.
+// It reads a sequence of numbers from the input file and computes, for each
+// number, the sum of all integers up to that number
+
+// This is a test program which can be compiled by the TastierCompiler.
+// It reads a sequence of numbers from the input file and computes, for each
+// number, the sum of all integers up to that number
+
+program Test {
+   const int z:= 5>7? 10+1 : 20-1;
+   
+ 
+  void Main() {
+   
+
+
+ 
+   write z;
+ 
+   
+  
+  
+  }
+}
+

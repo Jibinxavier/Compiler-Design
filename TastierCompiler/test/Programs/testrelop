@@ -1,0 +1,46 @@
+// This is a test program which can be compiled by the TastierCompiler.
+// It reads a sequence of numbers from the input file and computes, for each
+// number, the sum of all integers up to that number
+
+program Test {
+  const int y:=32000;
+  const bool n:=true;
+  const int m:= y/2;
+  int i,k;
+  void sumup(){
+  } 
+  void testRelop(){
+     if(i!=1){
+      write 1;
+     }  
+     if(i=y){
+      write 2;
+     }
+     if(i>=y){
+      write 3;
+     }
+     if(i<=y){
+      write 4;
+     }
+     if(i>2){
+      write 5;
+     }
+     if(3<i){
+      write 6;
+     }
+     if(n){
+      write 76;
+     }
+    
+  }
+  void Main() {
+   
+   i:=y;
+   testRelop(); 
+   write y;
+   write i;  
+   write m;
+     
+  }
+}
+
