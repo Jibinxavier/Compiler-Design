@@ -10,7 +10,7 @@ program Test {
      int i[5][3][2];
      string stringArray[2][4]
     }
-    int [3]arr2;
+    int arr2[3];
 
  void procP(Struct structure n){
     write n.i[2][1][1];
@@ -28,11 +28,11 @@ program Test {
   void Main() { 
     
       
-   int [5][3][2] arr ;
+   int  arr [5][3][2];
     arr[2][1][1]:=2321;
 
 
-    string [6][3] st1;
+    string  st1 [6][3];
     st1[2][2]:="hello";  
  
     
@@ -52,6 +52,6 @@ program Test {
     }
     write count;// prints out 14
  
-   
+
   }
 }

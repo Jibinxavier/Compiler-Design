@@ -131,27 +131,28 @@ Program program = new Program();
 Program prevprogram;
 List<Program> updateActionList = new List<Program> ();
 
-// start of memory for strings or arrays
+// start of memory heap
 int statAddr=4090;
-
-int startAStructArray=4096;
-// this is to avoid clashes with item 5
-
-Program header = new Program(); //
-Dictionary <int ,List<int>> arrSymbolInfo=new Dictionary <int ,List<int>> ();
  
+
+Program header = new Program(); 
+//Stores size each dimension. Key is the addr in the dmem which is unique
+Dictionary <int ,List<int>> arrSymbolInfo=new Dictionary <int ,List<int>> ();
+
+//Count of global declarations
 int globalDec=0;
  
  
 Program tmpProgram ; // used for temporarily storing instructions
  
-// When a procedure is declared with 
+// When a procedure is declared, it parameter details are stored in this dictionary. The key is the procedure label name.
 Dictionary <String ,List<Symbol>> procParamInfo=new Dictionary <String ,List<Symbol>> ();
- 
+
+// Stores information about a particular struct.Key is the name of struct 
 Dictionary <String ,List<Symbol>> structInfo =new Dictionary <String ,List<Symbol>> ();
 
 //Stores the information of the instance of a struct. This was done to avoid clashes with instances of different structs that have the same name 
-// It also makes the code more readable 
+ // key addr in dmem.
 Dictionary <int ,List<Symbol>> structInstanceInfo =new Dictionary <int ,List<Symbol>> ();
  
 
@@ -302,27 +303,9 @@ Symbol lookup(Stack<Scope> scopes, string name) {
   }
   return null; // if the name wasn't found in any open scopes.
 }
-// This method is used to store the local strings 
-int findAddr(Stack<Scope> scopes) {
-  int count = 0;
-  foreach (Scope scope in scopes) {
-    foreach (Symbol s in scope) {
-      if (s.Item3 == (int)TastierType.String || s.Item4 == 0) {
-        count++;
-      }
-    }
-  }
-  return count; // return the number of global / string Consts / variables...
-}
+ 
 
-/*
-  You may notice that when we use a LoadG or StoG instruction, we add 3 to
-  the address of the item being loaded or stored. This is because the
-  control and status registers of the machine are mapped in at addresses 0,
-  1, and 2 in data memory, so we cannot use those locations for storing
-  variables. If you want to load rtp, rbp, or rpc onto the stack to
-  manipulate them, you can LoadG and StoG to those locations.
-*/
+ 
 
 /*--------------------------------------------------------------------------*/
 
@@ -368,40 +351,7 @@ Expr<out TastierType type>      (.  TastierType type1; Instruction inst; .)
                                 .)
   ].
 
-/*------------------------------------------------------------------------*/
-
-ArrayAccess<Symbol sym>  (. List<int> dimens;   int noD=0; TastierType type;.)
-=   
-         '['                         (.
-                                           
-                                           program.Add(new Instruction("", "LoadG " + (sym.Item5+3))); // load the start of the address
-                       
-                                          dimens =arrSymbolInfo[sym.Item5];  
-                                    .)
-              Expr<out type>        (. 
-                                         
-                                          
-                                         if(type!=TastierType.Integer){
-                                          SemErr(" cannot index using this type");  
-                                         }
-                                          noD++;
-
-
-                                     .)
-           ']'
-           {'['                     (.program.Add(new Instruction("", "Const "  +dimens[noD]));
-                                      program.Add(new Instruction("", "Mul")); .)  
-              Expr<out type>        (. 
-                                         if(type!=TastierType.Integer){
-                                          SemErr(" cannot index using this type");  
-                                         }
-                                         
-                                         program.Add(new Instruction("", "Add")); 
-                                          noD++; 
-                                     .)
-       
-           ']'}(.program.Add(new Instruction("", "Sub"));.)           // subtract offset to index 
-.   
+   
 Factor<out TastierType type>    (.  int n; Symbol sym; string name; List<int> dimens;   int noD=0;   string name2; List <Symbol> symbols; int addr;TastierType strucElemType=TastierType.Undefined;.)
 =                               (.  type = TastierType.Undefined;Symbol structSym=null; .)
   ( Ident<out name>            (. 
@@ -502,10 +452,7 @@ Factor<out TastierType type>    (.  int n; Symbol sym; string name; List<int> di
                                                   offset = sym.Item5+3;
                                              
                                               if ((TastierKind)sym.Item2 == TastierKind.Array) {
-                                                  
-                                                  
                                                    
-                                                  
                                                    program.Add(new Instruction("", "LoadT"));// new instruction which loads what is on the top off stack
                                                }
                                                else if((TastierKind)sym.Item2 == TastierKind.Struct){
@@ -870,9 +817,9 @@ UpdateAction                     (.  TastierType type; string name; Symbol sym; 
         .).
 
 /*------------------------------------------------------------------------*/
-Stat                            (.  TastierType type,type2,strucElemType=TastierType.Undefined;  List<int> dimens;    int noD=0,offset,addr=0; Symbol sym,sym3; bool external = false;
-                                    bool isExternal = false;  string name2,name,name1;  int index=0; List <Symbol> symbols; TastierKind strucElemKind;
-                                    .) 
+Stat                            (.  TastierType type,type2,strucElemType=TastierType.Undefined;  List<int> dimens;    int noD=0,offset,addr=0; Symbol sym; bool external = false;
+                                    bool isExternal = false;  string name2,name,name1;  int index=0; List <Symbol> symbols; TastierKind strucElemKind;  
+                                    Symbol sym3=new Symbol("",0,0,0,0);.) 
 = Ident<out name>               (.
                                     sym = lookup(openScopes, name);
                                     if (sym == null) {
@@ -1359,9 +1306,9 @@ StructDecl (.Symbol sym; string name; List <Symbol> symbols= new List<Symbol> ()
       Type<out type>
       Ident<out name2> (. sym=new Symbol(name2, (int)TastierKind.Var, (int)type, 0,  0 );// address do not  matter
                        .)
-        ['['  number         (. sym = new Symbol(name2, (int)TastierKind.Array, (int)type, 0, startAStructArray); //since item5 is used to store the dimensions in the arrSymbolInfo and the dictionary
+        ['['  number         (. sym = new Symbol(name2, (int)TastierKind.Array, (int)type, 0, globalDec); //since item5 is used to store the dimensions in the arrSymbolInfo and the dictionary
                                                                                                                  // needs unique item5 
-                               startAStructArray++;
+                               globalDec++;
                                dimnS.Add(Convert.ToInt32(t.val));
                           .) 
         ']'
@@ -1378,8 +1325,8 @@ StructDecl (.Symbol sym; string name; List <Symbol> symbols= new List<Symbol> ()
        ";" Type<out type>
         Ident<out name2> (. sym=new Symbol(name2, (int)TastierKind.Var, (int)type, 0,  0 );// address do not  matter
                        .)
-        ['['  number         (. sym = new Symbol(name2, (int)TastierKind.Array, (int)type, 0, startAStructArray); 
-                             startAStructArray++;
+        ['['  number         (. sym = new Symbol(name2, (int)TastierKind.Array, (int)type, 0, globalDec); 
+                             globalDec++;
                              dimnS.Add(Convert.ToInt32(t.val));
                           .) 
         ']'
@@ -1614,8 +1561,8 @@ ConstDecl            (.
    Arrays strings and structs are considered global variables
 */ 
 VarDecl<bool external>           (.
-                                    string name; TastierType type; Scope currentScope = openScopes.Peek();Symbol sym;int mSize;List<int> dimnS = new List<int> ();
-                                  Symbol sym;
+                                    string name; TastierType type; Scope currentScope = openScopes.Peek();Symbol sym=new Symbol("",0,0,0,0);int mSize;List<int> dimnS = new List<int> ();
+                                 
                                  .)
 = Type<out type>
      ( 
@@ -1677,11 +1624,7 @@ VarDecl<bool external>           (.
       
 
     { ',' Ident<out name>          (. 
-                                      if (external) {
-                                        externalDeclarations.Push(new Symbol(name, (int)TastierKind.Var, (int)type, 0, 0));
-                       
-                                      } else {
-                                        
+                                      
                                         if (((openScopes.Count-1) > 0) && (type != TastierType.String))
                                         {                                       
                                           sym=new Symbol(name, (int)TastierKind.Var, (int)type, openScopes.Count-1, ( currentScope.Count(s => (s.Item2 == (int)TastierKind.Var) || (s.Item2 == (int)TastierKind.Const)
@@ -1690,12 +1633,8 @@ VarDecl<bool external>           (.
                                         else
                                         { // for global variables
                                            
-                                           sym=new Symbol(name, (int)TastierKind.Var, (int)type, 0,  globalDec );
-                                        
-                                             
-                                          
-                                        }
-                                      }
+                                           sym=new Symbol(name, (int)TastierKind.Var, (int)type, 0,  globalDec ); 
+                                         }
                                   .)
         [  
          '[' number                  (.  
